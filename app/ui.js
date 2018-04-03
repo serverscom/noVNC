@@ -164,6 +164,7 @@ var UI = {
         UI.initSetting('resize', 'off');
         UI.initSetting('shared', true);
         UI.initSetting('view_only', false);
+        UI.initSetting('idrac_support', false);
         UI.initSetting('path', 'websockify');
         UI.initSetting('repeaterID', '');
         UI.initSetting('reconnect', false);
@@ -350,6 +351,8 @@ var UI = {
         UI.addSettingChangeHandler('shared');
         UI.addSettingChangeHandler('view_only');
         UI.addSettingChangeHandler('view_only', UI.updateViewOnly);
+        UI.addSettingChangeHandler('idrac_support');
+        UI.addSettingChangeHandler('idrac_support', UI.updateIdracSupport);
         UI.addSettingChangeHandler('host');
         UI.addSettingChangeHandler('port');
         UI.addSettingChangeHandler('path');
@@ -953,6 +956,19 @@ var UI = {
     clipboardSend: function() {
         var text = document.getElementById('noVNC_clipboard_text').value;
         Log.Debug(">> UI.clipboardSend: " + text.substr(0,40) + "...");
+
+        if (!UI.rfb) {
+            return false;
+        }
+
+        // Special for Dell servers with iDRAC and without clipboard support
+        if (UI.rfb.idracSupport) {
+            for (var i = 0; i < text.length; i++) {
+                UI.rfb.sendKey(keysyms.lookup(text.charCodeAt(i)));
+            }
+            return false;
+        }
+
         UI.rfb.clipboardPasteFrom(text);
         Log.Debug("<< UI.clipboardSend");
     },
@@ -1033,6 +1049,7 @@ var UI = {
         UI.rfb.resizeSession = UI.getSetting('resize') === 'remote';
 
         UI.updateViewOnly(); // requires UI.rfb
+        UI.updateIdracSupport(); // requires UI.rfb
     },
 
     disconnect: function() {
@@ -1428,47 +1445,49 @@ var UI = {
         UI.rfb.sendKey(keysym, code, down);
     },
 
+    getNextLength: function (selectionStart, value) {
+        try {
+            return Math.max(selectionStart, value);
+        } catch (error) {
+            return value;
+        }
+    },
+
+    compareInputs: function(nextInput, prevInput) {
+        return nextInput - prevInput;
+    },
+
+    getBackSpacesValue: function(inputs) {
+        return inputs < 0 ? -inputs : 0;
+    },
+
     // When normal keyboard events are left uncought, use the input events from
     // the keyboardinput element instead and generate the corresponding key events.
     // This code is required since some browsers on Android are inconsistent in
     // sending keyCodes in the normal keyboard events when using on screen keyboards.
     keyInput: function(event) {
-
-        if (!UI.rfb) return;
-
-        var newValue = event.target.value;
+        if (!UI.rfb) {
+            return false;
+        }
 
         if (!UI.lastKeyboardinput) {
             UI.keyboardinputReset();
         }
-        var oldValue = UI.lastKeyboardinput;
 
-        var newLen;
-        try {
-            // Try to check caret position since whitespace at the end
-            // will not be considered by value.length in some browsers
-            newLen = Math.max(event.target.selectionStart, newValue.length);
-        } catch (err) {
-            // selectionStart is undefined in Google Chrome
-            newLen = newValue.length;
-        }
-        var oldLen = oldValue.length;
+        var nextValue = event.target.value;
+        var prevValue = UI.lastKeyboardinput;
 
-        var backspaces;
-        var inputs = newLen - oldLen;
-        if (inputs < 0) {
-            backspaces = -inputs;
-        } else {
-            backspaces = 0;
-        }
+        var nextLength = UI.getNextLength(event.target.selectionStart, event.target.value);
+
+        var inputs = UI.compareInputs(nextLength, prevValue.length);
+        var backspaces = UI.getBackSpacesValue(inputs);
 
         // Compare the old string with the new to account for
         // text-corrections or other input that modify existing text
-        var i;
-        for (i = 0; i < Math.min(oldLen, newLen); i++) {
-            if (newValue.charAt(i) != oldValue.charAt(i)) {
-                inputs = newLen - i;
-                backspaces = oldLen - i;
+        for (iterator = 0; iterator < Math.min(prevValue.length, nextLength); iterator++) {
+            if (nextValue.charAt(iterator) !== prevValue.charAt(iterator)) {
+                inputs = nextLength - iterator;
+                backspaces = prevValue.length - iterator;
                 break;
             }
         }
@@ -1477,14 +1496,14 @@ var UI = {
         for (i = 0; i < backspaces; i++) {
             UI.rfb.sendKey(KeyTable.XK_BackSpace, "Backspace");
         }
-        for (i = newLen - inputs; i < newLen; i++) {
-            UI.rfb.sendKey(keysyms.lookup(newValue.charCodeAt(i)));
+        for (i = nextLength - inputs; i < nextLength; i++) {
+            UI.rfb.sendKey(keysyms.lookup(nextValue.charCodeAt(i)));
         }
 
         // Control the text content length in the keyboardinput element
-        if (newLen > 2 * UI.defaultKeyboardinputLen) {
+        if (nextLength > 2 * UI.defaultKeyboardinputLen) {
             UI.keyboardinputReset();
-        } else if (newLen < 1) {
+        } else if (nextLength < 1) {
             // There always have to be some text in the keyboardinput
             // element with which backspace can interact.
             UI.keyboardinputReset();
@@ -1495,7 +1514,7 @@ var UI = {
             // This has to be ran outside of the input handler in order to work
             setTimeout(event.target.focus.bind(event.target), 0);
         } else {
-            UI.lastKeyboardinput = newValue;
+            UI.lastKeyboardinput = nextValue;
         }
     },
 
@@ -1606,6 +1625,15 @@ var UI = {
                 .classList.remove('noVNC_hidden');
         }
         UI.setMouseButton(1); //has it's own logic for hiding/showing
+    },
+
+    updateIdracSupport: function() {
+        if (!UI.rfb) {
+            return false;
+        };
+
+        document.getElementById('noVNC_clipboard_text').value = '';
+        UI.rfb.idracSupport = UI.getSetting('idrac_support');
     },
 
     updateLogging: function() {

@@ -12,7 +12,7 @@ export var encodings = {
     encodingRRE: 2,
     encodingHextile: 5,
     encodingTight: 7,
-    encodingTightPNG: -260,
+    // encodingTightPNG: -260,
 
     pseudoEncodingQualityLevel9: -23,
     pseudoEncodingQualityLevel0: -32,

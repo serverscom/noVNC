@@ -276,6 +276,15 @@ RFB.prototype = {
         }
     },
 
+    /**
+     * iDRAC doesn't support clipboard
+     */
+    _idracSupport: false,
+    get idracSupport() { return this._idracSupport; },
+    set idracSupport(idracSupport) {
+        this._idracSupport = Boolean(idracSupport);
+    },
+
     get capabilities() { return this._capabilities; },
 
     get touchButton() { return this._mouse.touchButton; },

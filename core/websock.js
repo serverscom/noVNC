@@ -34,7 +34,7 @@ export default class Websock {
 
         this._sQbufferSize = 1024 * 10;  // 10 KiB
         // called in init: this._sQ = new Uint8Array(this._sQbufferSize);
-    this._sQlen = this._sQlen || 0;
+        this._sQlen = this._sQlen || 0;
         this._sQ = null;  // Send queue
 
         this._eventHandlers = {

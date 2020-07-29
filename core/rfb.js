@@ -333,7 +333,7 @@ export default class RFB extends EventTargetMixin {
         this._idracSupport = Boolean(idracSupport);
     }
 
-    get capabilities() { return this._capabilities; },
+    get capabilities() { return this._capabilities; }
 
     get touchButton() { return 0; }
     set touchButton(button) { Log.Warn("Using old API!"); }

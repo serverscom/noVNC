@@ -963,7 +963,7 @@ const UI = {
 
     clipboardSend() {
         const text = document.getElementById('noVNC_clipboard_text').value;
-        Log.Debug(">> UI.clipboardSend: " + text.substr(0,40) + "...");
+        Log.Debug(">> UI.clipboardSend: " + text.substr(0, 40) + "...");
 
         if (!UI.rfb) {
             return false;
@@ -971,7 +971,7 @@ const UI = {
 
         // Special for Dell servers with iDRAC and without clipboard support
         if (UI.rfb.idracSupport) {
-            for (var i = 0; i < text.length; i++) {
+            for (let i = 0; i < text.length; i++) {
                 UI.rfb.sendKey(keysyms.lookup(text.charCodeAt(i)));
             }
             return false;
@@ -1470,7 +1470,7 @@ const UI = {
         UI.rfb.sendKey(keysym, code, down);
     },
 
-    getNextLength: function (selectionStart, value) {
+    getNextLength(selectionStart, value) {
         try {
             return Math.max(selectionStart, value);
         } catch (error) {
@@ -1478,11 +1478,11 @@ const UI = {
         }
     },
 
-    compareInputs: function(nextInput, prevInput) {
+    compareInputs(nextInput, prevInput) {
         return nextInput - prevInput;
     },
 
-    getBackSpacesValue: function(inputs) {
+    getBackSpacesValue(inputs) {
         return inputs < 0 ? -inputs : 0;
     },
 
@@ -1675,10 +1675,10 @@ const UI = {
         UI.rfb.showDotCursor = UI.getSetting('show_dot');
     },
 
-    updateIdracSupport: function() {
+    updateIdracSupport() {
         if (!UI.rfb) {
             return false;
-        };
+        }
 
         document.getElementById('noVNC_clipboard_text').value = '';
         UI.rfb.idracSupport = UI.getSetting('idrac_support');
